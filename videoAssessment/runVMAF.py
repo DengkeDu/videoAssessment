@@ -3,7 +3,7 @@ import asyncio
 import sys
 
 resolution = ""
-ffmpeg = FFmpeg(executable='/home/dengke/workdir/gpu/ffmpeg/ffmpeg')
+ffmpeg = FFmpeg()
 @ffmpeg.on('progress')
 def on_ffmpeg_progress(progress):
     if 'VMAF' in progress._fields:
