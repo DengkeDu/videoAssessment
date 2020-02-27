@@ -111,19 +111,22 @@ def assessment(request):
         stdout,stderr = process.communicate()
         s = stdout.decode()
         s=s.rstrip()
-        res["PSNR"] = s
+        res["type"] = "psnr"
+        res["value"] = s
     elif algorithms_type == "vmaf":
         process = Popen(['python','videoAssessment/runVMAF.py',dl_file1,file2_scale],stdout=PIPE,cwd=os.getcwd())
         stdout,stderr = process.communicate()
         s = stdout.decode()
-        s=s.rstrip()        
-        res["VMAF"] = s
+        s=s.rstrip()      
+        res["type"] = "vmaf"
+        res["value"] = s  
     elif algorithms_type == "ssim":
         process = Popen(['python','videoAssessment/runSSIM.py',dl_file1,file2_scale],stdout=PIPE,cwd=os.getcwd())
         stdout,stderr = process.communicate()
         s = stdout.decode()
-        s=s.rstrip()        
-        res["SSIM"] = s        
+        s=s.rstrip()
+        res["type"] = "ssim"
+        res["value"] = s        
     if len(res) == 0:
         res["info"] = "Nothing"
     response = json.dumps(res)    
