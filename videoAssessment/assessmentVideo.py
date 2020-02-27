@@ -6,6 +6,7 @@ from ffmpeg import FFmpeg
 import asyncio
 from subprocess import Popen,PIPE
 import os
+import pyprobe
 
 def assessment(request):
     video_dict = {}
@@ -17,6 +18,7 @@ def assessment(request):
     dl_file1 = ""
     dl_file2 = ""
     algorithms_type = ""
+    parser = pyprobe.VideoFileParser(ffprobe="ffprobe", includeMissing=True, rawMode=False)
     try:
         video_dict = json.loads(video_json)
         if "file1" not in video_dict or "file2" not in video_dict:
@@ -51,13 +53,44 @@ def assessment(request):
     print(dl_file1)
     print(dl_file2)
     
+    # Does the file type was video?
+    try:
+        file1_info = parser.parseFfprobe(dl_file1)
+        file2_info = parser.parseFfprobe(dl_file2)
+    except Exception:
+        res["error"] = -5
+        res["info"] = "file1 or file2 was not multimedia file"
+        response = json.dumps(res)
+        return HttpResponse(response)
+    
+    if "videos" not in file1_info or "videos" not in file2_info:
+        res["error"] = -6
+        res["info"] = "file1 or file2 was not video file"
+        response = json.dumps(res)
+        return HttpResponse(response)
+    
+    if len(file1_info['videos']) > 1 or len(file2_info['videos']) > 1:
+        res["error"] = -7
+        res["info"] = "file1 or file2 has more than one video stream, we support one video file, one video stream"
+        response = json.dumps(res)
+        return HttpResponse(response)
+    
+    
     # Get resolution
-    process = Popen(['python','videoAssessment/runFFprobe.py',dl_file1],stdout=PIPE,cwd=os.getcwd())
-    stdout,stderr = process.communicate()
-    file1_resolution = stdout.decode().rstrip()   
-    process = Popen(['python','videoAssessment/runFFprobe.py',dl_file2],stdout=PIPE,cwd=os.getcwd())
-    stdout,stderr = process.communicate()
-    file2_resolution = stdout.decode().rstrip()  
+    # process = Popen(['python','videoAssessment/runFFprobe.py',dl_file1],stdout=PIPE,cwd=os.getcwd())
+    # stdout,stderr = process.communicate()
+    # file1_resolution = stdout.decode().rstrip()   
+    # process = Popen(['python','videoAssessment/runFFprobe.py',dl_file2],stdout=PIPE,cwd=os.getcwd())
+    # stdout,stderr = process.communicate()
+    # file2_resolution = stdout.decode().rstrip()  
+    file1_resolution = file1_info['videos'][0]['resolution']
+    file2_resolution = file2_info['videos'][0]['resolution']
+    
+    file1_resolution = str(file1_resolution[0])+"x"+str(file1_resolution[1])
+    file2_resolution = str(file2_resolution[0])+"x"+str(file2_resolution[1])
+    
+    print(file1_resolution)
+    print(file2_resolution)
     
     # Scale file
     if file1_resolution != file2_resolution:
