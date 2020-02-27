@@ -13,6 +13,7 @@ def assessment(request):
     video_json = request.body
     file1 = ""
     file2 = ""
+    file2_scale = ""
     dl_file1 = ""
     dl_file2 = ""
     algorithms_type = ""
@@ -23,8 +24,10 @@ def assessment(request):
             res["info"] = "file1 and file2 must be in body together"
             response = json.dumps(res)
             return HttpResponse(response)
-        if "algorithms_type" in video_dict:
-            algorithms_type = video_dict['algorithms_type']
+        if "algorithms_type" not in video_dict:
+            algorithms_type = "vmaf"
+        else:
+            algorithms_type = video_dict["algorithms_type"]
         file1 = video_dict["file1"]
         file2 = video_dict["file2"]
         print(video_json)
@@ -47,23 +50,47 @@ def assessment(request):
 
     print(dl_file1)
     print(dl_file2)
-    # process = Popen(['python','videoAssessment/runFFprobe.py',dl_file1],stdout=PIPE,cwd=os.getcwd())
-    # stdout,stderr = process.communicate()
-    # s = stdout.decode()
     
+    # Get resolution
+    process = Popen(['python','videoAssessment/runFFprobe.py',dl_file1],stdout=PIPE,cwd=os.getcwd())
+    stdout,stderr = process.communicate()
+    file1_resolution = stdout.decode().rstrip()   
+    process = Popen(['python','videoAssessment/runFFprobe.py',dl_file2],stdout=PIPE,cwd=os.getcwd())
+    stdout,stderr = process.communicate()
+    file2_resolution = stdout.decode().rstrip()  
+    
+    # Scale file
+    if file1_resolution != file2_resolution:
+        process = Popen(['python','videoAssessment/runFFscale.py',dl_file2,file1_resolution],stdout=PIPE,cwd=os.getcwd())
+        stdout,stderr = process.communicate()
+        ret = stdout.decode().rstrip()
+        if ret == "completed":
+            file2_scale = dl_file2 +"_scale"
+            print(file2_scale)
+        else:
+            print("%s scale to %s failed" % (file2,file2_resolution))
+    else:
+        file2_scale = dl_file2
+        print("No need to scale")
+               
     if algorithms_type == "psnr":
-        process = Popen(['python','videoAssessment/runPSNR.py',dl_file1,dl_file2],stdout=PIPE,cwd=os.getcwd())
+        process = Popen(['python','videoAssessment/runPSNR.py',dl_file1,file2_scale],stdout=PIPE,cwd=os.getcwd())
         stdout,stderr = process.communicate()
         s = stdout.decode()
         s=s.rstrip()
         res["PSNR"] = s
-        print(s)
     elif algorithms_type == "vmaf":
-        process = Popen(['python','videoAssessment/runVMAF.py',dl_file1,dl_file2],stdout=PIPE,cwd=os.getcwd())
+        process = Popen(['python','videoAssessment/runVMAF.py',dl_file1,file2_scale],stdout=PIPE,cwd=os.getcwd())
         stdout,stderr = process.communicate()
         s = stdout.decode()
         s=s.rstrip()        
         res["VMAF"] = s
+    elif algorithms_type == "ssim":
+        process = Popen(['python','videoAssessment/runSSIM.py',dl_file1,file2_scale],stdout=PIPE,cwd=os.getcwd())
+        stdout,stderr = process.communicate()
+        s = stdout.decode()
+        s=s.rstrip()        
+        res["SSIM"] = s        
     
     response = json.dumps(res)
     return HttpResponse(response)

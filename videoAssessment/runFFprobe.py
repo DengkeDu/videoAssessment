@@ -6,7 +6,9 @@ resolution = ""
 ffprobe = FFmpeg(executable='ffprobe')
 @ffprobe.on('progress')
 def on_ffprobe_progress(progress):
-    print(progress.resolution)
+    if 'resolution' in progress._fields:
+        resolution = progress.resolution.replace("\n","").replace("\r","")
+        print(resolution)
     
 ffprobe.input(sys.argv[1])
 loop = asyncio.get_event_loop()
