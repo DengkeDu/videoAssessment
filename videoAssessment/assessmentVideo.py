@@ -124,6 +124,7 @@ def assessment(request):
         s = stdout.decode()
         s=s.rstrip()        
         res["SSIM"] = s        
-    
-    response = json.dumps(res)
+    if len(res) == 0:
+        res["info"] = "Nothing"
+    response = json.dumps(res)    
     return HttpResponse(response)
