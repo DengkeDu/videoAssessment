@@ -7,8 +7,18 @@ import asyncio
 from subprocess import Popen,PIPE
 import os
 import pyprobe
+import logging
 
 def assessment(request):
+    loger = logging.getLogger(__name__)
+    logging.basicConfig(level=logging.DEBUG,#控制台打印的日志级别
+                    filename='new.log',
+                    filemode='a',##模式，有w和a，w就是写模式，每次都会重新写日志，覆盖之前的日志
+                    #a是追加模式，默认如果不写的话，就是追加模式
+                    format=
+                    '%(asctime)s - [line:%(lineno)d] - %(levelname)s: %(message)s'
+                    #日志格式
+                    )
     video_dict = {}
     res = {}
     video_json = request.body
@@ -32,6 +42,7 @@ def assessment(request):
             algorithms_type = video_dict["algorithms_type"]
         file1 = video_dict["file1"]
         file2 = video_dict["file2"]
+        loger.info(video_json)
         print(video_json)
         print("aaaaaaaaaaaaa")
     except Exception:
@@ -52,11 +63,15 @@ def assessment(request):
 
     print(dl_file1)
     print(dl_file2)
+    loger.info(dl_file1)
+    loger.info(dl_file2)
     
     # Does the file type was video?
     try:
         file1_info = parser.parseFfprobe(dl_file1)
         file2_info = parser.parseFfprobe(dl_file2)
+        loger.info(file1_info)
+        loger.info(file2_info)
     except Exception:
         res["error"] = -5
         res["info"] = "file1 or file2 was not multimedia file"
@@ -91,22 +106,26 @@ def assessment(request):
     
     print(file1_resolution)
     print(file2_resolution)
+    loger.info(file1_resolution)
+    loger.info(file2_resolution)
     
     # Scale file
     if file1_resolution != file2_resolution:
+        loger.info("starting scale")
         process = Popen(['python','videoAssessment/runFFscale.py',dl_file2,file1_resolution],stdout=PIPE,cwd=os.getcwd())
         stdout,stderr = process.communicate()
         ret = stdout.decode().rstrip()
         if ret == "completed":
             file2_scale = dl_file2 +"_scale"
-            print(file2_scale)
+            loger.info(file2_scale)
         else:
-            print("%s scale to %s failed" % (file2,file2_resolution))
+            loger.info("%s scale to %s failed" % (file2,file2_resolution))
     else:
         file2_scale = dl_file2
-        print("No need to scale")
+        loger.info("No need to scale")
                
     if algorithms_type == "psnr":
+        loger.info("runing psnr")
         process = Popen(['python','videoAssessment/runPSNR.py',dl_file1,file2_scale],stdout=PIPE,cwd=os.getcwd())
         stdout,stderr = process.communicate()
         s = stdout.decode()
@@ -114,6 +133,7 @@ def assessment(request):
         res["type"] = "psnr"
         res["value"] = s
     elif algorithms_type == "vmaf":
+        loger.info("runing vmaf")
         process = Popen(['python','videoAssessment/runVMAF.py',dl_file1,file2_scale],stdout=PIPE,cwd=os.getcwd())
         stdout,stderr = process.communicate()
         s = stdout.decode()
@@ -121,6 +141,7 @@ def assessment(request):
         res["type"] = "vmaf"
         res["value"] = s  
     elif algorithms_type == "ssim":
+        loger.info("runing ssim")
         process = Popen(['python','videoAssessment/runSSIM.py',dl_file1,file2_scale],stdout=PIPE,cwd=os.getcwd())
         stdout,stderr = process.communicate()
         s = stdout.decode()
@@ -129,5 +150,7 @@ def assessment(request):
         res["value"] = s        
     if len(res) == 0:
         res["info"] = "Nothing"
+    loger.info("Completed")
+    loger.info(res)
     response = json.dumps(res)    
     return HttpResponse(response)
