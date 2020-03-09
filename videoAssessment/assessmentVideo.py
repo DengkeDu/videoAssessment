@@ -22,6 +22,8 @@ def assessment(request):
     video_dict = {}
     res = {}
     video_json = request.body
+    loger.info(video_json)
+    loger.info("starting:-------------------------------------------------------------------")
     file1 = ""
     file2 = ""
     file2_scale = ""
